@@ -80,7 +80,7 @@ fn right(a trnsfrm2d.Position, b trnsfrm2d.Position, c trnsfrm2d.Position) bool 
 	return area(a, b, c) < 0
 }
 
-pub fn decompose(polygon []trnsfrm2d.Position) ?[][]trnsfrm2d.Position {
+pub fn decompose(polygon []trnsfrm2d.Position) [][]trnsfrm2d.Position {
 	mut convex_polygons := [][]trnsfrm2d.Position{}
 
 	vertices_count := polygon.len
@@ -106,8 +106,8 @@ pub fn decompose(polygon []trnsfrm2d.Position) ?[][]trnsfrm2d.Position {
 	mut upper_part := []trnsfrm2d.Position{}
 	mut lower_part := []trnsfrm2d.Position{}
 
-	mut min_left := ?f64(none)
-	mut min_bottom := ?f64(none)
+	mut min_left := 0.0
+	mut min_bottom := 0.0
 	mut min_i := ?int(none)
 
 	for reflex_vertex in reflex_vertices {
@@ -130,13 +130,13 @@ pub fn decompose(polygon []trnsfrm2d.Position) ?[][]trnsfrm2d.Position {
 
 			if left_on(reflex_vertex, prev_vertex, next_vertex)
 				&& right(reflex_vertex, polygon[(reflex_i + 1) % vertices_count], next_vertex) {
-				if min_i == none || (next_vertex.y < min_bottom?
-					|| (next_vertex.y == min_bottom? && next_vertex.x > min_left?)) {
+				if min_i == none || (next_vertex.y < min_bottom
+					|| (next_vertex.y == min_bottom && next_vertex.x > min_left)) {
 					min_left = next_vertex.x
 					min_bottom = next_vertex.y
 					min_i = (reflex_i + vertex_index) % vertices_count
 
-					min_i_val := min_i?
+					min_i_val := min_i or { 0 }
 
 					upper_part = if reflex_i < min_i_val {
 						polygon[reflex_i..min_i_val + 1]
@@ -167,8 +167,8 @@ pub fn decompose(polygon []trnsfrm2d.Position) ?[][]trnsfrm2d.Position {
 		return convex_polygons
 	}
 
-	convex_polygons << decompose(upper_part) or { [] }
-	convex_polygons << decompose(lower_part) or { [] }
+	convex_polygons << decompose(upper_part)
+	convex_polygons << decompose(lower_part)
 
 	return convex_polygons
 }
