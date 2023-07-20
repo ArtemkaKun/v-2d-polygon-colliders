@@ -9,8 +9,8 @@ handling of 2D polygonal collisions.
 
 The pcoll2d library comprises three parts:
 - `polygon.v`: Defines the polygon data structure.
-- `sat_collision.v`: Uses the Separating Axis Theorem (SAT) algorithm to check if two convex polygons
-collide.
+- `sat_collision.v`: Uses the Separating Axis Theorem (SAT) algorithm to check if two convex
+polygons collide.
 - `bayazit_decomposition.v`: Handles the decomposition of a polygon into convex polygons using the
 Bayazit algorithm.
 
