@@ -14,7 +14,7 @@ fn test_decompose_triangle_polygon() {
 		y: 0.0
 	}]
 
-	convex_polygons := decompose(polygon)
+	convex_polygons := decomp_polygon(polygon)
 
 	assert convex_polygons.len == 1
 	assert convex_polygons[0] == polygon
@@ -35,7 +35,7 @@ fn test_decompose_square_polygon() {
 		y: 0.0
 	}]
 
-	convex_polygons := decompose(polygon)
+	convex_polygons := decomp_polygon(polygon)
 
 	assert convex_polygons.len == 1
 	assert convex_polygons[0] == polygon
@@ -56,7 +56,7 @@ fn test_decompose_concave_polygon_1() {
 		y: 0.0
 	}]
 
-	convex_polygons := decompose(polygon)
+	convex_polygons := decomp_polygon(polygon)
 
 	assert convex_polygons.len == 2
 
@@ -101,7 +101,7 @@ fn test_decompose_concave_polygon_2() {
 		y: 0.0
 	}]
 
-	convex_polygons := decompose(polygon)
+	convex_polygons := decomp_polygon(polygon)
 
 	assert convex_polygons.len == 2
 
@@ -155,7 +155,7 @@ fn test_decompose_concave_polygon_3() {
 		y: 0.0
 	}]
 
-	convex_polygons := decompose(polygon)
+	convex_polygons := decomp_polygon(polygon)
 
 	assert convex_polygons.len == 3
 
