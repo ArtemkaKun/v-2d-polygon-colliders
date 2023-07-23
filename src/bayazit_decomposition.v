@@ -1,7 +1,6 @@
 module pcoll2d
 
 import artemkakun.trnsfrm2d
-import arrays
 import math
 
 fn get_previous_vertex(polygon []trnsfrm2d.Position, vertex_index int) trnsfrm2d.Position {
@@ -14,10 +13,6 @@ fn get_previous_vertex(polygon []trnsfrm2d.Position, vertex_index int) trnsfrm2d
 
 fn get_next_vertex(polygon []trnsfrm2d.Position, vertex_index int) trnsfrm2d.Position {
 	return polygon[(vertex_index + 1) % polygon.len]
-}
-
-fn is_reflect(prev_vertex trnsfrm2d.Position, vertex trnsfrm2d.Position, next_vertex trnsfrm2d.Position) bool {
-	return (next_vertex.y - vertex.y) * (prev_vertex.x - vertex.x) < (next_vertex.x - vertex.x) * (prev_vertex.y - vertex.y)
 }
 
 // def lineInt(l1, l2, precision=0):
@@ -88,6 +83,10 @@ fn calculate_triangle_area(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Posit
 	return (vertex_b.x - vertex_a.x) * (vertex_c.y - vertex_a.y) - (vertex_b.y - vertex_a.y) * (vertex_c.x - vertex_a.x)
 }
 
+fn is_left(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Position, vertex_c trnsfrm2d.Position) bool {
+	return calculate_triangle_area(vertex_a, vertex_b, vertex_c) > 0
+}
+
 fn is_left_or_on(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Position, vertex_c trnsfrm2d.Position) bool {
 	return calculate_triangle_area(vertex_a, vertex_b, vertex_c) >= 0
 }
@@ -147,8 +146,8 @@ fn get_vertex_at(polygon []trnsfrm2d.Position, i int) trnsfrm2d.Position {
 //
 
 fn is_reflex(polygon []trnsfrm2d.Position, i int) bool {
-	return is_right(get_previous_vertex(polygon, i - 1), get_vertex_at(polygon, i), get_vertex_at(polygon,
-		i + 1))
+	return is_right(get_previous_vertex(polygon, i), get_vertex_at(polygon, i), get_next_vertex(polygon,
+		i))
 }
 
 // def polygonCanSee(polygon, a, b):
@@ -190,8 +189,8 @@ fn can_see(polygon []trnsfrm2d.Position, a int, b int) bool {
 	mut l1 := [2]trnsfrm2d.Position{}
 	mut l2 := [2]trnsfrm2d.Position{}
 
-	if is_left_or_on(get_vertex_at(polygon, a + 1), get_vertex_at(polygon, a), get_vertex_at(polygon, b))
-		&& is_right_or_on(get_vertex_at(polygon, a - 1), get_vertex_at(polygon, a), get_vertex_at(polygon, b)) {
+	if is_left_or_on(get_next_vertex(polygon, a), get_vertex_at(polygon, a), get_vertex_at(polygon, b))
+		&& is_right_or_on(get_previous_vertex(polygon, a), get_vertex_at(polygon, a), get_vertex_at(polygon, b)) {
 		return false
 	}
 
@@ -202,12 +201,12 @@ fn can_see(polygon []trnsfrm2d.Position, a int, b int) bool {
 			continue
 		}
 
-		if is_left_or_on(get_vertex_at(polygon, a), get_vertex_at(polygon, b), get_vertex_at(polygon, i + 1))
+		if is_left_or_on(get_vertex_at(polygon, a), get_vertex_at(polygon, b), get_next_vertex(polygon, i))
 			&& is_right_or_on(get_vertex_at(polygon, a), get_vertex_at(polygon, b), get_vertex_at(polygon, i)) { // if diag intersects an edge
 			l1[0] = get_vertex_at(polygon, a)
 			l1[1] = get_vertex_at(polygon, b)
 			l2[0] = get_vertex_at(polygon, i)
-			l2[1] = get_vertex_at(polygon, i + 1)
+			l2[1] = get_next_vertex(polygon, i)
 			p := find_line_intersection_point(l1, l2)
 			if calculate_sqdist(get_vertex_at(polygon, a), p) < dist { // if edge is blocking visibility to b
 				return false
@@ -445,4 +444,362 @@ pub fn decomp_polygon(polygon []trnsfrm2d.Position) [][]trnsfrm2d.Position {
 	} else {
 		return [polygon]
 	}
+}
+
+// def polygonQuickDecomp(polygon, result=None, reflexVertices=None, steinerPoints=None, delta=25, maxlevel=100, level=0):
+//    """Quickly decompose the Polygon into convex sub-polygons.
+//
+//    Keyword arguments:
+//    polygon -- The polygon to decompose
+//    result -- Stores result of decomposed polygon, passed recursively
+//    reflexVertices --
+//    steinerPoints --
+//    delta -- Currently unused
+//    maxlevel -- The maximum allowed level of recursion
+//    level -- The current level of recursion
+//
+//    Returns:
+//    List of decomposed convex polygons
+//
+//    """
+//    if result is None:
+//        result = []
+//    reflexVertices = reflexVertices or []
+//    steinerPoints = steinerPoints or []
+//
+//    upperInt = [0, 0]
+//    lowerInt = [0, 0]
+//    p = [0, 0]         # Points
+//    upperDist = 0
+//    lowerDist = 0
+//    d = 0
+//    closestDist = 0 # scalars
+//    upperIndex = 0
+//    lowerIndex = 0
+//    closestIndex = 0 # integers
+//    lowerPoly = []
+//    upperPoly = [] # polygons
+//    poly = polygon
+//    v = polygon
+//
+//    if len(v) < 3:
+//        return result
+//
+//    level += 1
+//    if level > maxlevel:
+//        print("quickDecomp: max level ("+str(maxlevel)+") reached.")
+//        return result
+//
+//    for i in xrange(0, len(polygon)):
+//        if polygonIsReflex(poly, i):
+//            reflexVertices.append(poly[i])
+//            upperDist = float('inf')
+//            lowerDist = float('inf')
+//
+//            for j in xrange(0, len(polygon)):
+//                if isLeft(polygonAt(poly, i - 1), polygonAt(poly, i), polygonAt(poly, j)) and isRightOn(polygonAt(poly, i - 1), polygonAt(poly, i), polygonAt(poly, j - 1)): # if line intersects with an edge
+//                    p = getIntersectionPoint(polygonAt(poly, i - 1), polygonAt(poly, i), polygonAt(poly, j), polygonAt(poly, j - 1)) # find the point of intersection
+//                    if isRight(polygonAt(poly, i + 1), polygonAt(poly, i), p): # make sure it's inside the poly
+//                        d = sqdist(poly[i], p)
+//                        if d < lowerDist: # keep only the closest intersection
+//                            lowerDist = d
+//                            lowerInt = p
+//                            lowerIndex = j
+//
+//                if isLeft(polygonAt(poly, i + 1), polygonAt(poly, i), polygonAt(poly, j + 1)) and isRightOn(polygonAt(poly, i + 1), polygonAt(poly, i), polygonAt(poly, j)):
+//                    p = getIntersectionPoint(polygonAt(poly, i + 1), polygonAt(poly, i), polygonAt(poly, j), polygonAt(poly, j + 1))
+//                    if isLeft(polygonAt(poly, i - 1), polygonAt(poly, i), p):
+//                        d = sqdist(poly[i], p)
+//                        if d < upperDist:
+//                            upperDist = d
+//                            upperInt = p
+//                            upperIndex = j
+//
+//            # if there are no vertices to connect to, choose a point in the middle
+//            if lowerIndex == (upperIndex + 1) % len(polygon):
+//                #print("Case 1: Vertex("+str(i)+"), lowerIndex("+str(lowerIndex)+"), upperIndex("+str(upperIndex)+"), poly.size("+str(len(polygon))+")")
+//                p[0] = (lowerInt[0] + upperInt[0]) / 2
+//                p[1] = (lowerInt[1] + upperInt[1]) / 2
+//                steinerPoints.append(p)
+//
+//                if i < upperIndex:
+//                    #lowerPoly.insert(lowerPoly.end(), poly.begin() + i, poly.begin() + upperIndex + 1)
+//                    polygonAppend(lowerPoly, poly, i, upperIndex+1)
+//                    lowerPoly.append(p)
+//                    upperPoly.append(p)
+//                    if lowerIndex != 0:
+//                        #upperPoly.insert(upperPoly.end(), poly.begin() + lowerIndex, poly.end())
+//                        polygonAppend(upperPoly, poly, lowerIndex, len(poly))
+//
+//                    #upperPoly.insert(upperPoly.end(), poly.begin(), poly.begin() + i + 1)
+//                    polygonAppend(upperPoly, poly, 0, i+1)
+//                else:
+//                    if i != 0:
+//                        #lowerPoly.insert(lowerPoly.end(), poly.begin() + i, poly.end())
+//                        polygonAppend(lowerPoly, poly, i, len(poly))
+//
+//                    #lowerPoly.insert(lowerPoly.end(), poly.begin(), poly.begin() + upperIndex + 1)
+//                    polygonAppend(lowerPoly, poly, 0, upperIndex+1)
+//                    lowerPoly.append(p)
+//                    upperPoly.append(p)
+//                    #upperPoly.insert(upperPoly.end(), poly.begin() + lowerIndex, poly.begin() + i + 1)
+//                    polygonAppend(upperPoly, poly, lowerIndex, i+1)
+//
+//            else:
+//                # connect to the closest point within the triangle
+//                #print("Case 2: Vertex("+str(i)+"), closestIndex("+str(closestIndex)+"), poly.size("+str(len(polygon))+")\n")
+//
+//                if lowerIndex > upperIndex:
+//                    upperIndex += len(polygon)
+//
+//                closestDist = float('inf')
+//
+//                if upperIndex < lowerIndex:
+//                    return result
+//
+//                for j in xrange(lowerIndex, upperIndex+1):
+//                    if isLeftOn(polygonAt(poly, i - 1), polygonAt(poly, i), polygonAt(poly, j)) and isRightOn(polygonAt(poly, i + 1), polygonAt(poly, i), polygonAt(poly, j)):
+//                        d = sqdist(polygonAt(poly, i), polygonAt(poly, j))
+//                        if d < closestDist:
+//                            closestDist = d
+//                            closestIndex = j % len(polygon)
+//
+//                if i < closestIndex:
+//                    polygonAppend(lowerPoly, poly, i, closestIndex+1)
+//                    if closestIndex != 0:
+//                        polygonAppend(upperPoly, poly, closestIndex, len(v))
+//
+//                    polygonAppend(upperPoly, poly, 0, i+1)
+//                else:
+//                    if i != 0:
+//                        polygonAppend(lowerPoly, poly, i, len(v))
+//
+//                    polygonAppend(lowerPoly, poly, 0, closestIndex+1)
+//                    polygonAppend(upperPoly, poly, closestIndex, i+1)
+//
+//            # solve smallest poly first
+//            if len(lowerPoly) < len(upperPoly):
+//                polygonQuickDecomp(lowerPoly, result, reflexVertices, steinerPoints, delta, maxlevel, level)
+//                polygonQuickDecomp(upperPoly, result, reflexVertices, steinerPoints, delta, maxlevel, level)
+//            else:
+//                polygonQuickDecomp(upperPoly, result, reflexVertices, steinerPoints, delta, maxlevel, level)
+//                polygonQuickDecomp(lowerPoly, result, reflexVertices, steinerPoints, delta, maxlevel, level)
+//
+//            return result
+//
+//    result.append(polygon)
+//
+//    return result
+//
+
+pub fn quick_decomp(polygon []trnsfrm2d.Position) [][]trnsfrm2d.Position {
+	mut result := [][]trnsfrm2d.Position{}
+	mut reflex_vertices := []trnsfrm2d.Position{}
+	mut steiner_points := []trnsfrm2d.Position{}
+
+	mut upper_int := trnsfrm2d.Position{}
+	mut lower_int := trnsfrm2d.Position{}
+	mut p := trnsfrm2d.Position{}
+
+	mut upper_dist := 0.0
+	mut lower_dist := 0.0
+	mut d := 0
+	mut closest_dist := 0
+
+	mut upper_index := 0
+	mut lower_index := 0
+	mut closest_index := 0
+
+	mut upper_poly := []trnsfrm2d.Position{}
+	mut lower_poly := []trnsfrm2d.Position{}
+
+	if polygon.len < 3 {
+		return result
+	}
+
+	for vertex_id in 0 .. polygon.len {
+		if is_reflex(polygon, vertex_id) {
+			reflex_vertices << polygon[vertex_id]
+			upper_dist = math.inf(1)
+			lower_dist = math.inf(1)
+
+			for vertex_id_2 in 0 .. polygon.len {
+				if is_left(get_previous_vertex(polygon, vertex_id), get_vertex_at(polygon, vertex_id), get_vertex_at(polygon, vertex_id_2))
+					&& is_right_or_on(get_previous_vertex(polygon, vertex_id), get_vertex_at(polygon, vertex_id), get_previous_vertex(polygon, vertex_id_2)) {
+					p = get_intersection_point(get_previous_vertex(polygon, vertex_id),
+						get_vertex_at(polygon, vertex_id), get_vertex_at(polygon, vertex_id_2),
+						get_previous_vertex(polygon, vertex_id_2))
+
+					if is_right(get_next_vertex(polygon, vertex_id), get_vertex_at(polygon,
+						vertex_id), p)
+					{
+						d = sqdist(polygon[vertex_id], p)
+						if d < lower_dist {
+							lower_dist = d
+							lower_int = p
+							lower_index = vertex_id_2
+						}
+					}
+				}
+
+				if is_left(get_next_vertex(polygon, vertex_id), get_vertex_at(polygon, vertex_id), get_next_vertex(polygon, vertex_id_2))
+					&& is_right_or_on(get_next_vertex(polygon, vertex_id), get_vertex_at(polygon, vertex_id), get_vertex_at(polygon, vertex_id_2)) {
+					p = get_intersection_point(get_next_vertex(polygon, vertex_id), get_vertex_at(polygon,
+						vertex_id), get_vertex_at(polygon, vertex_id_2), get_next_vertex(polygon,
+						vertex_id_2))
+
+					if is_left(get_previous_vertex(polygon, vertex_id), get_vertex_at(polygon,
+						vertex_id), p)
+					{
+						d = sqdist(polygon[vertex_id], p)
+						if d < upper_dist {
+							upper_dist = d
+							upper_int = p
+							upper_index = vertex_id_2
+						}
+					}
+				}
+			}
+
+			if lower_index == (upper_index + 1) % polygon.len {
+				p = trnsfrm2d.Position{
+					x: (lower_int.x + upper_int.x) / 2
+					y: (lower_int.y + upper_int.y) / 2
+				}
+
+				steiner_points << p
+
+				if vertex_id < upper_index {
+					lower_poly << polygon[vertex_id..upper_index + 1]
+					lower_poly << p
+					upper_poly << p
+
+					if lower_index != 0 {
+						upper_poly << polygon[lower_index..polygon.len]
+					}
+
+					upper_poly << polygon[0..vertex_id + 1]
+				} else {
+					if vertex_id != 0 {
+						lower_poly << polygon[0..vertex_id + 1]
+					}
+
+					lower_poly << polygon[0..upper_index + 1]
+					lower_poly << p
+					upper_poly << p
+					upper_poly << polygon[lower_index..vertex_id + 1]
+				}
+			} else {
+				if lower_index > upper_index {
+					upper_index += polygon.len
+				}
+
+				closest_dist = math.inf(1)
+
+				if upper_index < lower_index {
+					return result
+				}
+
+				for vertex_id_2 in lower_index .. upper_index + 1 {
+					if is_left_or_on(get_previous_vertex(polygon, vertex_id), get_vertex_at(polygon, vertex_id), get_vertex_at(polygon, vertex_id_2))
+						&& is_right_or_on(get_next_vertex(polygon, vertex_id), get_vertex_at(polygon, vertex_id), get_vertex_at(polygon, vertex_id_2)) {
+						d = sqdist(get_vertex_at(polygon, vertex_id), get_vertex_at(polygon,
+							vertex_id_2))
+						if d < closest_dist {
+							closest_dist = d
+							closest_index = vertex_id_2 % polygon.len
+						}
+					}
+				}
+
+				if vertex_id < closest_index {
+					lower_poly << polygon[vertex_id..closest_index + 1]
+
+					if closest_index != 0 {
+						upper_poly << polygon[closest_index..polygon.len]
+					}
+
+					upper_poly << polygon[0..vertex_id + 1]
+				} else {
+					if vertex_id != 0 {
+						lower_poly << polygon[vertex_id..polygon.len]
+					}
+
+					lower_poly << polygon[0..closest_index + 1]
+					upper_poly << polygon[closest_index..vertex_id + 1]
+				}
+			}
+
+			//            # solve smallest poly first
+			//            if len(lowerPoly) < len(upperPoly):
+			//                polygonQuickDecomp(lowerPoly, result, reflexVertices, steinerPoints, delta, maxlevel, level)
+			//                polygonQuickDecomp(upperPoly, result, reflexVertices, steinerPoints, delta, maxlevel, level)
+			//            else:
+			//                polygonQuickDecomp(upperPoly, result, reflexVertices, steinerPoints, delta, maxlevel, level)
+			//                polygonQuickDecomp(lowerPoly, result, reflexVertices, steinerPoints, delta, maxlevel, level)
+			//
+			//            return result
+			if lower_poly < upper_poly.len {
+			}
+		}
+	}
+}
+
+// def getIntersectionPoint(p1, p2, q1, q2, delta=0):
+//    """Gets the intersection point
+//
+//    Keyword arguments:
+//    p1 -- The start vertex of the first line segment.
+//    p2 -- The end vertex of the first line segment.
+//    q1 -- The start vertex of the second line segment.
+//    q2 -- The end vertex of the second line segment.
+//    delta -- Optional precision to check if lines are parallel (default 0)
+//
+//    Returns:
+//    The intersection point.
+//
+//    """
+//    a1 = p2[1] - p1[1]
+//    b1 = p1[0] - p2[0]
+//    c1 = (a1 * p1[0]) + (b1 * p1[1])
+//    a2 = q2[1] - q1[1]
+//    b2 = q1[0] - q2[0]
+//    c2 = (a2 * q1[0]) + (b2 * q1[1])
+//    det = (a1 * b2) - (a2 * b1)
+//
+//    if not scalar_eq(det, 0, delta):
+//        return [((b2 * c1) - (b1 * c2)) / det, ((a1 * c2) - (a2 * c1)) / det]
+//    else:
+//        return [0, 0]
+//
+
+fn get_intersection_point(p1 trnsfrm2d.Position, p2 trnsfrm2d.Position, q1 trnsfrm2d.Position, q2 trnsfrm2d.Position) trnsfrm2d.Position {
+	a1 := p2.y - p1.y
+	b1 := p1.x - p2.x
+	c1 := (a1 * p1.x) + (b1 * p1.y)
+	a2 := q2.y - q1.y
+	b2 := q1.x - q2.x
+	c2 := (a2 * q1.x) + (b2 * q1.y)
+	det := (a1 * b2) - (a2 * b1)
+
+	if det.eq_epsilon(0) == false {
+		return trnsfrm2d.Position{
+			x: ((b2 * c1) - (b1 * c2)) / det
+			y: ((a1 * c2) - (a2 * c1)) / det
+		}
+	} else {
+		return trnsfrm2d.Position{}
+	}
+}
+
+// def sqdist(a, b):
+//    dx = b[0] - a[0]
+//    dy = b[1] - a[1]
+//    return dx * dx + dy * dy
+//
+
+fn sqdist(a trnsfrm2d.Position, b trnsfrm2d.Position) f64 {
+	dx := b.x - a.x
+	dy := b.y - a.y
+	return dx * dx + dy * dy
 }
