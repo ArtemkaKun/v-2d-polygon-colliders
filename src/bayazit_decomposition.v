@@ -1,79 +1,191 @@
 module pcoll2d
 
 import artemkakun.trnsfrm2d
-import arrays
+import math
 
 // decompose returns a list of convex polygons that are the result of decomposing the given polygon into convex polygons.
 // If the given polygon is convex, then the result will be a list with the original polygon.
+// ATTENTION! This method works only with counter-clockwise polygons.
 // Bayazit algorithm is used to decompose the polygon.
 // The algorithm is described here: https://mpen.ca/406/bayazit
 pub fn decompose(polygon []trnsfrm2d.Position) [][]trnsfrm2d.Position {
-	reflex_vertices_ids := get_reflect_vertices_ids(polygon)
+	mut result := [][]trnsfrm2d.Position{}
 
-	mut min_vertex_id := ?int(none)
-	mut min_vertex := trnsfrm2d.Position{}
+	mut upper_int := trnsfrm2d.Position{}
+	mut lower_int := trnsfrm2d.Position{}
+	mut p := trnsfrm2d.Position{}
 
-	mut polygon_parts := [2][]trnsfrm2d.Position{}
+	mut upper_dist := 0.0
+	mut lower_dist := 0.0
+	mut d := 0.0
+	mut closest_dist := 0.0
 
-	vertices_count := polygon.len
+	mut upper_index := 0
+	mut lower_index := 0
+	mut closest_index := 0
 
-	for reflex_vertex_id in reflex_vertices_ids {
-		reflex_vertex := polygon[reflex_vertex_id]
+	mut upper_poly := []trnsfrm2d.Position{}
+	mut lower_poly := []trnsfrm2d.Position{}
 
-		for vertex_index in 1 .. vertices_count {
-			next_vertex_id := (reflex_vertex_id + vertex_index) % vertices_count
+	if polygon.len < 3 {
+		return result
+	}
 
-			if next_vertex_id in reflex_vertices_ids {
-				continue
-			}
+	for vertex_id in 0 .. polygon.len {
+		if is_reflex(polygon, vertex_id) {
+			upper_dist = math.inf(1)
+			lower_dist = math.inf(1)
 
-			next_vertex := polygon[next_vertex_id]
-			prev_vertex := get_previous_vertex(polygon, reflex_vertex_id)
+			for vertex_id_2 in 0 .. polygon.len {
+				if is_left(get_previous_vertex(polygon, vertex_id), get_vertex_at(polygon, vertex_id), get_vertex_at(polygon, vertex_id_2))
+					&& is_right_or_on(get_previous_vertex(polygon, vertex_id), get_vertex_at(polygon, vertex_id), get_previous_vertex(polygon, vertex_id_2)) {
+					p = get_intersection_point(get_previous_vertex(polygon, vertex_id),
+						get_vertex_at(polygon, vertex_id), get_vertex_at(polygon, vertex_id_2),
+						get_previous_vertex(polygon, vertex_id_2))
 
-			is_reflex_vertex_left_or_on := is_left_or_on(reflex_vertex, prev_vertex, next_vertex)
-			is_reflex_vertex_right := is_right(reflex_vertex, get_next_vertex(polygon,
-				reflex_vertex_id), next_vertex)
+					if is_right(get_next_vertex(polygon, vertex_id), get_vertex_at(polygon,
+						vertex_id), p)
+					{
+						d = sqdist(polygon[vertex_id], p)
+						if d < lower_dist {
+							lower_dist = d
+							lower_int = p
+							lower_index = vertex_id_2
+						}
+					}
+				}
 
-			if is_reflex_vertex_left_or_on && is_reflex_vertex_right {
-				is_next_vertex_under_or_right_to_min := is_vertex_under_or_right(next_vertex,
-					min_vertex)
+				if is_left(get_next_vertex(polygon, vertex_id), get_vertex_at(polygon, vertex_id), get_next_vertex(polygon, vertex_id_2))
+					&& is_right_or_on(get_next_vertex(polygon, vertex_id), get_vertex_at(polygon, vertex_id), get_vertex_at(polygon, vertex_id_2)) {
+					p = get_intersection_point(get_next_vertex(polygon, vertex_id), get_vertex_at(polygon,
+						vertex_id), get_vertex_at(polygon, vertex_id_2), get_next_vertex(polygon,
+						vertex_id_2))
 
-				if min_vertex_id == none || is_next_vertex_under_or_right_to_min {
-					min_vertex_id = next_vertex_id
-					min_vertex = next_vertex
-
-					min_vertex_id_value := min_vertex_id or { 0 } // NOTE: or block is never executed
-
-					polygon_parts = [
-						calculate_cut_part(polygon, reflex_vertex_id, min_vertex_id_value),
-						calculate_cut_part(polygon, min_vertex_id_value, reflex_vertex_id),
-					]!
+					if is_left(get_previous_vertex(polygon, vertex_id), get_vertex_at(polygon,
+						vertex_id), p)
+					{
+						d = sqdist(polygon[vertex_id], p)
+						if d < upper_dist {
+							upper_dist = d
+							upper_int = p
+							upper_index = vertex_id_2
+						}
+					}
 				}
 			}
+
+			if lower_index == (upper_index + 1) % polygon.len {
+				p = trnsfrm2d.Position{
+					x: (lower_int.x + upper_int.x) / 2
+					y: (lower_int.y + upper_int.y) / 2
+				}
+
+				if vertex_id < upper_index {
+					lower_poly << polygon[vertex_id..upper_index + 1]
+					lower_poly << p
+					upper_poly << p
+
+					if lower_index != 0 {
+						upper_poly << polygon[lower_index..polygon.len]
+					}
+
+					upper_poly << polygon[0..vertex_id + 1]
+				} else {
+					if vertex_id != 0 {
+						lower_poly << polygon[0..vertex_id + 1]
+					}
+
+					lower_poly << polygon[0..upper_index + 1]
+					lower_poly << p
+					upper_poly << p
+					upper_poly << polygon[lower_index..vertex_id + 1]
+				}
+			} else {
+				if lower_index > upper_index {
+					upper_index += polygon.len
+				}
+
+				closest_dist = math.inf(1)
+
+				if upper_index < lower_index {
+					return result
+				}
+
+				for vertex_id_2 in lower_index .. upper_index + 1 {
+					if is_left_or_on(get_previous_vertex(polygon, vertex_id), get_vertex_at(polygon, vertex_id), get_vertex_at(polygon, vertex_id_2))
+						&& is_right_or_on(get_next_vertex(polygon, vertex_id), get_vertex_at(polygon, vertex_id), get_vertex_at(polygon, vertex_id_2)) {
+						d = sqdist(get_vertex_at(polygon, vertex_id), get_vertex_at(polygon,
+							vertex_id_2))
+						if d < closest_dist {
+							closest_dist = d
+							closest_index = vertex_id_2 % polygon.len
+						}
+					}
+				}
+
+				if vertex_id < closest_index {
+					lower_poly << polygon[vertex_id..closest_index + 1]
+
+					if closest_index != 0 {
+						upper_poly << polygon[closest_index..polygon.len]
+					}
+
+					upper_poly << polygon[0..vertex_id + 1]
+				} else {
+					if vertex_id != 0 {
+						lower_poly << polygon[vertex_id..polygon.len]
+					}
+
+					lower_poly << polygon[0..closest_index + 1]
+					upper_poly << polygon[closest_index..vertex_id + 1]
+				}
+			}
+
+			if lower_poly.len < upper_poly.len {
+				result << decompose(lower_poly)
+				result << decompose(upper_poly)
+			} else {
+				result << decompose(upper_poly)
+				result << decompose(lower_poly)
+			}
+
+			return result
 		}
 	}
 
-	if min_vertex_id == none {
-		return [polygon]
-	}
+	result << polygon
 
-	return arrays.concat(decompose(polygon_parts[0]), ...decompose(polygon_parts[1]))
+	return result
 }
 
-fn get_reflect_vertices_ids(polygon []trnsfrm2d.Position) []int {
-	mut reflex_vertices_ids := []int{}
+fn is_reflex(polygon []trnsfrm2d.Position, i int) bool {
+	return is_right(get_previous_vertex(polygon, i), get_vertex_at(polygon, i), get_next_vertex(polygon,
+		i))
+}
 
-	for vertex_index in 0 .. polygon.len {
-		prev_vertex := get_previous_vertex(polygon, vertex_index)
-		vertex := polygon[vertex_index]
-		next_vertex := get_next_vertex(polygon, vertex_index)
+fn get_vertex_at(polygon []trnsfrm2d.Position, i int) trnsfrm2d.Position {
+	s := polygon.len
+	return polygon[i % s]
+}
 
-		if is_reflect(prev_vertex, vertex, next_vertex) {
-			reflex_vertices_ids << vertex_index
-		}
-	}
+fn is_left(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Position, vertex_c trnsfrm2d.Position) bool {
+	return calculate_triangle_area(vertex_a, vertex_b, vertex_c) > 0
+}
 
-	return reflex_vertices_ids
+fn is_left_or_on(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Position, vertex_c trnsfrm2d.Position) bool {
+	return calculate_triangle_area(vertex_a, vertex_b, vertex_c) >= 0
+}
+
+fn is_right_or_on(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Position, vertex_c trnsfrm2d.Position) bool {
+	return calculate_triangle_area(vertex_a, vertex_b, vertex_c) <= 0
+}
+
+fn is_right(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Position, vertex_c trnsfrm2d.Position) bool {
+	return calculate_triangle_area(vertex_a, vertex_b, vertex_c) < 0
+}
+
+fn calculate_triangle_area(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Position, vertex_c trnsfrm2d.Position) f64 {
+	return (vertex_b.x - vertex_a.x) * (vertex_c.y - vertex_a.y) - (vertex_b.y - vertex_a.y) * (vertex_c.x - vertex_a.x)
 }
 
 fn get_previous_vertex(polygon []trnsfrm2d.Position, vertex_index int) trnsfrm2d.Position {
@@ -88,34 +200,27 @@ fn get_next_vertex(polygon []trnsfrm2d.Position, vertex_index int) trnsfrm2d.Pos
 	return polygon[(vertex_index + 1) % polygon.len]
 }
 
-fn is_reflect(prev_vertex trnsfrm2d.Position, vertex trnsfrm2d.Position, next_vertex trnsfrm2d.Position) bool {
-	return (next_vertex.y - vertex.y) * (prev_vertex.x - vertex.x) < (next_vertex.x - vertex.x) * (prev_vertex.y - vertex.y)
-}
+fn get_intersection_point(p1 trnsfrm2d.Position, p2 trnsfrm2d.Position, q1 trnsfrm2d.Position, q2 trnsfrm2d.Position) trnsfrm2d.Position {
+	a1 := p2.y - p1.y
+	b1 := p1.x - p2.x
+	c1 := (a1 * p1.x) + (b1 * p1.y)
+	a2 := q2.y - q1.y
+	b2 := q1.x - q2.x
+	c2 := (a2 * q1.x) + (b2 * q1.y)
+	det := (a1 * b2) - (a2 * b1)
 
-fn is_left_or_on(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Position, vertex_c trnsfrm2d.Position) bool {
-	return calculate_polygon_area(vertex_a, vertex_b, vertex_c) >= 0
-}
-
-fn is_right(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Position, vertex_c trnsfrm2d.Position) bool {
-	return calculate_polygon_area(vertex_a, vertex_b, vertex_c) < 0
-}
-
-fn calculate_polygon_area(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Position, vertex_c trnsfrm2d.Position) f64 {
-	return (vertex_b.x - vertex_a.x) * (vertex_c.y - vertex_a.y) - (vertex_b.y - vertex_a.y) * (vertex_c.x - vertex_a.x)
-}
-
-fn is_vertex_under_or_right(vertex trnsfrm2d.Position, another_vertex trnsfrm2d.Position) bool {
-	is_vertex_right := vertex.y == another_vertex.y && vertex.x > another_vertex.x
-
-	return vertex.y < another_vertex.y || is_vertex_right
-}
-
-fn calculate_cut_part(polygon []trnsfrm2d.Position, start_vertex_id int, end_vertex_id int) []trnsfrm2d.Position {
-	incremented_end_vertex_id := end_vertex_id + 1
-
-	if start_vertex_id < end_vertex_id {
-		return polygon[start_vertex_id..incremented_end_vertex_id]
+	if det.eq_epsilon(0) == false {
+		return trnsfrm2d.Position{
+			x: ((b2 * c1) - (b1 * c2)) / det
+			y: ((a1 * c2) - (a2 * c1)) / det
+		}
 	} else {
-		return arrays.concat(polygon[start_vertex_id..], ...polygon[..incremented_end_vertex_id])
+		return trnsfrm2d.Position{}
 	}
+}
+
+fn sqdist(a trnsfrm2d.Position, b trnsfrm2d.Position) f64 {
+	dx := b.x - a.x
+	dy := b.y - a.y
+	return dx * dx + dy * dy
 }
