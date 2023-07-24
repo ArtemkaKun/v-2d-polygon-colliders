@@ -8,14 +8,14 @@ fn test_decompose_triangle_polygon() {
 		x: 0.0
 		y: 0.0
 	}, trnsfrm2d.Position{
-		x: 1.0
-		y: 1.0
-	}, trnsfrm2d.Position{
 		x: 2.0
 		y: 0.0
+	}, trnsfrm2d.Position{
+		x: 1.0
+		y: 1.0
 	}]
 
-	convex_polygons := decomp_polygon(polygon)
+	convex_polygons := quick_decomp(polygon)
 
 	assert convex_polygons.len == 1
 	assert convex_polygons[0] == polygon
@@ -26,17 +26,17 @@ fn test_decompose_square_polygon() {
 		x: 0.0
 		y: 0.0
 	}, trnsfrm2d.Position{
-		x: 0.0
-		y: 1.0
-	}, trnsfrm2d.Position{
-		x: 1.0
-		y: 1.0
-	}, trnsfrm2d.Position{
 		x: 1.0
 		y: 0.0
+	}, trnsfrm2d.Position{
+		x: 1.0
+		y: 1.0
+	}, trnsfrm2d.Position{
+		x: 0.0
+		y: 1.0
 	}]
 
-	convex_polygons := decomp_polygon(polygon)
+	convex_polygons := quick_decomp(polygon)
 
 	assert convex_polygons.len == 1
 	assert convex_polygons[0] == polygon
@@ -48,16 +48,16 @@ fn test_decompose_concave_polygon_1() {
 		y: 1.0
 	}, trnsfrm2d.Position{
 		x: 2.0
-		y: 2.0
+		y: 0.0
 	}, trnsfrm2d.Position{
 		x: 1.0
 		y: 1.0
 	}, trnsfrm2d.Position{
 		x: 2.0
-		y: 0.0
+		y: 2.0
 	}]
 
-	convex_polygons := decomp_polygon(polygon)
+	convex_polygons := quick_decomp(polygon)
 
 	assert convex_polygons.len == 2
 
@@ -65,21 +65,21 @@ fn test_decompose_concave_polygon_1() {
 		x: 0.0
 		y: 1.0
 	}, trnsfrm2d.Position{
-		x: 1.0
-		y: 1.0
-	}, trnsfrm2d.Position{
 		x: 2.0
 		y: 0.0
+	}, trnsfrm2d.Position{
+		x: 1.0
+		y: 1.0
 	}]
 
 	assert convex_polygons[1] == [trnsfrm2d.Position{
-		x: 0.0
+		x: 1.0
 		y: 1.0
 	}, trnsfrm2d.Position{
 		x: 2.0
 		y: 2.0
 	}, trnsfrm2d.Position{
-		x: 1.0
+		x: 0.0
 		y: 1.0
 	}]
 }
@@ -89,34 +89,31 @@ fn test_decompose_concave_polygon_2() {
 		x: -1.0
 		y: 0.0
 	}, trnsfrm2d.Position{
-		x: -2.0
+		x: 1.0
+		y: 0.0
+	}, trnsfrm2d.Position{
+		x: 2.0
 		y: 2.0
 	}, trnsfrm2d.Position{
 		x: 0.0
 		y: 1.0
 	}, trnsfrm2d.Position{
-		x: 2.0
+		x: -2.0
 		y: 2.0
-	}, trnsfrm2d.Position{
-		x: 1.0
-		y: 0.0
 	}]
 
-	convex_polygons := decomp_polygon(polygon)
+	convex_polygons := quick_decomp(polygon)
 
 	assert convex_polygons.len == 2
 
 	assert convex_polygons[0] == [trnsfrm2d.Position{
-		x: -1.0
-		y: 0.0
-	}, trnsfrm2d.Position{
 		x: 0.0
 		y: 1.0
 	}, trnsfrm2d.Position{
-		x: 2.0
+		x: -2.0
 		y: 2.0
 	}, trnsfrm2d.Position{
-		x: 1.0
+		x: -1.0
 		y: 0.0
 	}]
 
@@ -124,7 +121,10 @@ fn test_decompose_concave_polygon_2() {
 		x: -1.0
 		y: 0.0
 	}, trnsfrm2d.Position{
-		x: -2.0
+		x: 1.0
+		y: 0.0
+	}, trnsfrm2d.Position{
+		x: 2.0
 		y: 2.0
 	}, trnsfrm2d.Position{
 		x: 0.0
@@ -137,66 +137,66 @@ fn test_decompose_concave_polygon_3() {
 		x: -1.0
 		y: 0.0
 	}, trnsfrm2d.Position{
-		x: -2.0
-		y: 2.0
+		x: 1.0
+		y: 0.0
 	}, trnsfrm2d.Position{
-		x: -0.5
-		y: 1.0
-	}, trnsfrm2d.Position{
-		x: 0.0
+		x: 2.0
 		y: 2.0
 	}, trnsfrm2d.Position{
 		x: 0.5
 		y: 1.0
 	}, trnsfrm2d.Position{
-		x: 2.0
+		x: 0.0
 		y: 2.0
 	}, trnsfrm2d.Position{
-		x: 1.0
-		y: 0.0
+		x: -0.5
+		y: 1.0
+	}, trnsfrm2d.Position{
+		x: -2.0
+		y: 2.0
 	}]
 
-	convex_polygons := decomp_polygon(polygon)
+	convex_polygons := quick_decomp(polygon)
 
 	assert convex_polygons.len == 3
 
 	assert convex_polygons[0] == [trnsfrm2d.Position{
-		x: -1.0
+		x: 1.0
 		y: 0.0
-	}, trnsfrm2d.Position{
-		x: 0.5
-		y: 1.0
 	}, trnsfrm2d.Position{
 		x: 2.0
 		y: 2.0
 	}, trnsfrm2d.Position{
-		x: 1.0
-		y: 0.0
+		x: 0.5
+		y: 1.0
 	}]
 
 	assert convex_polygons[1] == [trnsfrm2d.Position{
-		x: -1.0
+		x: 1.0
 		y: 0.0
 	}, trnsfrm2d.Position{
-		x: -0.5
+		x: 0.5
 		y: 1.0
 	}, trnsfrm2d.Position{
 		x: 0.0
 		y: 2.0
 	}, trnsfrm2d.Position{
-		x: 0.5
+		x: -0.5
 		y: 1.0
 	}]
 
 	assert convex_polygons[2] == [trnsfrm2d.Position{
-		x: -1.0
-		y: 0.0
+		x: -0.5
+		y: 1.0
 	}, trnsfrm2d.Position{
 		x: -2.0
 		y: 2.0
 	}, trnsfrm2d.Position{
-		x: -0.5
-		y: 1.0
+		x: -1.0
+		y: 0.0
+	}, trnsfrm2d.Position{
+		x: 1.0
+		y: 0.0
 	}]
 }
 
@@ -205,5 +205,5 @@ fn test_one() {
 
 	polygon := json.decode(Polygon, polygon_file) or { panic(err) }
 
-	println(decomp_polygon(polygon.points))
+	assert json.encode(quick_decomp(polygon.points)) == '[[{"Vector":{"x":3.05,"y":3.1}},{"Vector":{"x":5.05,"y":1}},{"Vector":{"x":7,"y":1}},{"Vector":{"x":7,"y":3}}],[{"Vector":{"x":12,"y":3}},{"Vector":{"x":12,"y":2.05}},{"Vector":{"x":14.1,"y":0}},{"Vector":{"x":16,"y":0}},{"Vector":{"x":16,"y":4.05}}],[{"Vector":{"x":16,"y":4.05}},{"Vector":{"x":20,"y":4.05}},{"Vector":{"x":20,"y":13.1}}],[{"Vector":{"x":16,"y":4.05}},{"Vector":{"x":20,"y":13.1}},{"Vector":{"x":18.05,"y":14}}],[{"Vector":{"x":11,"y":17.95}},{"Vector":{"x":11,"y":19}},{"Vector":{"x":9,"y":21}},{"Vector":{"x":6.95,"y":21}},{"Vector":{"x":7,"y":17.05}}],[{"Vector":{"x":17.05,"y":15.95}},{"Vector":{"x":15,"y":18}},{"Vector":{"x":11,"y":17.95}},{"Vector":{"x":7,"y":17.05}}],[{"Vector":{"x":3.05,"y":17.05}},{"Vector":{"x":3.05,"y":18}},{"Vector":{"x":0,"y":18.05}},{"Vector":{"x":0,"y":4.05}}],[{"Vector":{"x":0,"y":4.05}},{"Vector":{"x":3.05,"y":3.1}},{"Vector":{"x":7,"y":3}},{"Vector":{"x":9.05,"y":3}},{"Vector":{"x":12,"y":3}},{"Vector":{"x":16,"y":4.05}},{"Vector":{"x":18.05,"y":14}},{"Vector":{"x":17.05,"y":15.95}},{"Vector":{"x":7,"y":17.05}},{"Vector":{"x":3.05,"y":17.05}}]]'
 }
