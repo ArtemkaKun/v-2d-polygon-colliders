@@ -3,7 +3,12 @@ module pcoll2d
 import artemkakun.trnsfrm2d
 import math
 
-pub fn quick_decomp(polygon []trnsfrm2d.Position) [][]trnsfrm2d.Position {
+// decompose returns a list of convex polygons that are the result of decomposing the given polygon into convex polygons.
+// If the given polygon is convex, then the result will be a list with the original polygon.
+// ATTENTION! This method works only with counter-clockwise polygons.
+// Bayazit algorithm is used to decompose the polygon.
+// The algorithm is described here: https://mpen.ca/406/bayazit
+pub fn decompose(polygon []trnsfrm2d.Position) [][]trnsfrm2d.Position {
 	mut result := [][]trnsfrm2d.Position{}
 
 	mut upper_int := trnsfrm2d.Position{}
@@ -137,11 +142,11 @@ pub fn quick_decomp(polygon []trnsfrm2d.Position) [][]trnsfrm2d.Position {
 			}
 
 			if lower_poly.len < upper_poly.len {
-				result << quick_decomp(lower_poly)
-				result << quick_decomp(upper_poly)
+				result << decompose(lower_poly)
+				result << decompose(upper_poly)
 			} else {
-				result << quick_decomp(upper_poly)
-				result << quick_decomp(lower_poly)
+				result << decompose(upper_poly)
+				result << decompose(lower_poly)
 			}
 
 			return result
