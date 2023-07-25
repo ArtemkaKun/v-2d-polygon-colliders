@@ -15,65 +15,8 @@ pub fn decompose(polygon []trnsfrm2d.Position) [][]trnsfrm2d.Position {
 	}
 
 	for vertex_id in 0 .. polygon.len {
-		if is_reflex(polygon, vertex_id) {
-			lower_intersection_point, lower_intersection_point_id := calculate_lower_intersection_point_with_id(polygon,
-				vertex_id)
-
-			upper_intersection_point, mut upper_intersection_point_id := calculate_upper_intersection_point_with_id(polygon,
-				vertex_id)
-
-			mut lower_poly := []trnsfrm2d.Position{}
-			mut upper_poly := []trnsfrm2d.Position{}
-
-			if lower_intersection_point_id == (upper_intersection_point_id + 1) % polygon.len {
-				lower_poly, upper_poly = slice_polygon_by_steiner_point(lower_intersection_point,
-					upper_intersection_point, upper_intersection_point_id, lower_intersection_point_id,
-					vertex_id, polygon)
-			} else {
-				if lower_intersection_point_id > upper_intersection_point_id {
-					upper_intersection_point_id += polygon.len
-				}
-
-				mut closest_dist := math.inf(1)
-				mut closest_index := 0
-
-				if upper_intersection_point_id < lower_intersection_point_id {
-					return [polygon]
-				}
-
-				previous_vertex_by_vertex_id := get_previous_vertex(polygon, vertex_id)
-				current_vertex_by_vertex_id := get_vertex_at(polygon, vertex_id)
-				next_vertex_by_vertex_id := get_next_vertex(polygon, vertex_id)
-
-				for vertex_id_2 in lower_intersection_point_id .. upper_intersection_point_id + 1 {
-					if is_left_or_on(previous_vertex_by_vertex_id, current_vertex_by_vertex_id, get_vertex_at(polygon, vertex_id_2))
-						&& is_right_or_on(next_vertex_by_vertex_id, current_vertex_by_vertex_id, get_vertex_at(polygon, vertex_id_2)) {
-						d := trnsfrm2d.calculate_distance_between_positions(current_vertex_by_vertex_id,
-							get_vertex_at(polygon, vertex_id_2))
-						if d < closest_dist {
-							closest_dist = d
-							closest_index = vertex_id_2 % polygon.len
-						}
-					}
-				}
-
-				if vertex_id < closest_index {
-					lower_poly << polygon[vertex_id..closest_index + 1]
-
-					if closest_index != 0 {
-						upper_poly << polygon[closest_index..polygon.len]
-					}
-
-					upper_poly << polygon[0..vertex_id + 1]
-				} else {
-					if vertex_id != 0 {
-						lower_poly << polygon[vertex_id..polygon.len]
-					}
-
-					lower_poly << polygon[0..closest_index + 1]
-					upper_poly << polygon[closest_index..vertex_id + 1]
-				}
-			}
+		if is_reflex_vertex(polygon, vertex_id) {
+			lower_poly, upper_poly := slice_polygon(polygon, vertex_id)
 
 			if lower_poly.len < upper_poly.len {
 				return arrays.concat(decompose(lower_poly), ...decompose(upper_poly))
@@ -86,9 +29,13 @@ pub fn decompose(polygon []trnsfrm2d.Position) [][]trnsfrm2d.Position {
 	return [polygon]
 }
 
-fn is_reflex(polygon []trnsfrm2d.Position, vertex_id int) bool {
+fn is_reflex_vertex(polygon []trnsfrm2d.Position, vertex_id int) bool {
 	return is_right(get_previous_vertex(polygon, vertex_id), get_vertex_at(polygon, vertex_id),
 		get_next_vertex(polygon, vertex_id))
+}
+
+fn is_right(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Position, vertex_c trnsfrm2d.Position) bool {
+	return calculate_triangle_area(vertex_a, vertex_b, vertex_c) < 0
 }
 
 fn is_left(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Position, vertex_c trnsfrm2d.Position) bool {
@@ -101,10 +48,6 @@ fn is_left_or_on(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Position, verte
 
 fn is_right_or_on(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Position, vertex_c trnsfrm2d.Position) bool {
 	return calculate_triangle_area(vertex_a, vertex_b, vertex_c) <= 0
-}
-
-fn is_right(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Position, vertex_c trnsfrm2d.Position) bool {
-	return calculate_triangle_area(vertex_a, vertex_b, vertex_c) < 0
 }
 
 fn calculate_triangle_area(vertex_a trnsfrm2d.Position, vertex_b trnsfrm2d.Position, vertex_c trnsfrm2d.Position) f64 {
@@ -127,13 +70,31 @@ fn get_vertex_at(polygon []trnsfrm2d.Position, vertex_id int) trnsfrm2d.Position
 	return polygon[vertex_id % polygon.len]
 }
 
-fn calculate_lower_intersection_point_with_id(polygon []trnsfrm2d.Position, current_global_vertex_id int) (trnsfrm2d.Position, int) {
+fn slice_polygon(polygon []trnsfrm2d.Position, vertex_id int) ([]trnsfrm2d.Position, []trnsfrm2d.Position) {
+	lower_intersection_point, lower_intersection_point_id := calculate_lower_intersection_point_with_id(polygon,
+		vertex_id)
+
+	upper_intersection_point, mut upper_intersection_point_id := calculate_upper_intersection_point_with_id(polygon,
+		vertex_id)
+
+	if lower_intersection_point_id == (upper_intersection_point_id + 1) % polygon.len {
+		return slice_polygon_by_steiner_point(lower_intersection_point, upper_intersection_point,
+			upper_intersection_point_id, lower_intersection_point_id, vertex_id, polygon)
+	} else {
+		closest_vertex_id := find_closest_vertex_id(polygon, lower_intersection_point_id,
+			upper_intersection_point_id, vertex_id)
+
+		return slice_polygon_by_closest_vertex(vertex_id, polygon, closest_vertex_id)
+	}
+}
+
+fn calculate_lower_intersection_point_with_id(polygon []trnsfrm2d.Position, global_vertex_id int) (trnsfrm2d.Position, int) {
 	mut lower_intersection_point := trnsfrm2d.Position{}
 	mut lower_intersection_point_id := 0
 
-	previous_global_vertex := get_previous_vertex(polygon, current_global_vertex_id)
-	current_global_vertex := get_vertex_at(polygon, current_global_vertex_id)
-	next_global_vertex := get_next_vertex(polygon, current_global_vertex_id)
+	previous_global_vertex := get_previous_vertex(polygon, global_vertex_id)
+	current_global_vertex := get_vertex_at(polygon, global_vertex_id)
+	next_global_vertex := get_next_vertex(polygon, global_vertex_id)
 
 	mut smallest_distance := math.inf(1)
 
@@ -166,13 +127,13 @@ fn calculate_lower_intersection_point_with_id(polygon []trnsfrm2d.Position, curr
 	return lower_intersection_point, lower_intersection_point_id
 }
 
-fn calculate_upper_intersection_point_with_id(polygon []trnsfrm2d.Position, current_global_vertex_id int) (trnsfrm2d.Position, int) {
+fn calculate_upper_intersection_point_with_id(polygon []trnsfrm2d.Position, global_vertex_id int) (trnsfrm2d.Position, int) {
 	mut upper_intersection_point := trnsfrm2d.Position{}
 	mut upper_intersection_point_id := 0
 
-	previous_global_vertex := get_previous_vertex(polygon, current_global_vertex_id)
-	current_global_vertex := get_vertex_at(polygon, current_global_vertex_id)
-	next_global_vertex := get_next_vertex(polygon, current_global_vertex_id)
+	previous_global_vertex := get_previous_vertex(polygon, global_vertex_id)
+	current_global_vertex := get_vertex_at(polygon, global_vertex_id)
+	next_global_vertex := get_next_vertex(polygon, global_vertex_id)
 
 	mut smallest_distance := math.inf(1)
 
@@ -264,6 +225,67 @@ fn slice_polygon_by_steiner_point(lower_intersection_point trnsfrm2d.Position, u
 		lower_poly << steiner_point
 		upper_poly << steiner_point
 		upper_poly << polygon[lower_intersection_point_id..vertex_id + 1]
+	}
+
+	return lower_poly, upper_poly
+}
+
+fn find_closest_vertex_id(polygon []trnsfrm2d.Position, lower_intersection_point_id int, upper_intersection_point_id int, global_vertex_id int) int {
+	upper_point_id_shift := if lower_intersection_point_id > upper_intersection_point_id {
+		polygon.len
+	} else {
+		0
+	}
+
+	mut smallest_distance := math.inf(1)
+	mut closest_vertex_id := 0
+
+	previous_global_vertex := get_previous_vertex(polygon, global_vertex_id)
+	current_global_vertex := get_vertex_at(polygon, global_vertex_id)
+	next_global_vertex := get_next_vertex(polygon, global_vertex_id)
+
+	up_search_vertex_id := upper_intersection_point_id + upper_point_id_shift + 1
+
+	for vertex_id in lower_intersection_point_id .. up_search_vertex_id {
+		is_from_left_or_on := is_left_or_on(previous_global_vertex, current_global_vertex,
+			get_vertex_at(polygon, vertex_id))
+
+		is_from_right_or_on := is_right_or_on(next_global_vertex, current_global_vertex,
+			get_vertex_at(polygon, vertex_id))
+
+		if is_from_left_or_on && is_from_right_or_on {
+			distance := trnsfrm2d.calculate_distance_between_positions(current_global_vertex,
+				get_vertex_at(polygon, vertex_id))
+
+			if distance < smallest_distance {
+				smallest_distance = distance
+				closest_vertex_id = vertex_id % polygon.len
+			}
+		}
+	}
+
+	return closest_vertex_id
+}
+
+fn slice_polygon_by_closest_vertex(vertex_id int, polygon []trnsfrm2d.Position, closest_vertex_id int) ([]trnsfrm2d.Position, []trnsfrm2d.Position) {
+	mut upper_poly := []trnsfrm2d.Position{}
+	mut lower_poly := []trnsfrm2d.Position{}
+
+	if vertex_id < closest_vertex_id {
+		lower_poly << polygon[vertex_id..closest_vertex_id + 1]
+
+		if closest_vertex_id != 0 {
+			upper_poly << polygon[closest_vertex_id..polygon.len]
+		}
+
+		upper_poly << polygon[0..vertex_id + 1]
+	} else {
+		if vertex_id != 0 {
+			lower_poly << polygon[vertex_id..polygon.len]
+		}
+
+		lower_poly << polygon[0..closest_vertex_id + 1]
+		upper_poly << polygon[closest_vertex_id..vertex_id + 1]
 	}
 
 	return lower_poly, upper_poly
