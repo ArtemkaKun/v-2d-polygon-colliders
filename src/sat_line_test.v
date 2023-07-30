@@ -19,7 +19,7 @@ fn test_lines_collide() {
 		y: 0
 	}]
 
-	assert check_collision(first_line_points, second_line_points)!
+	assert check_collision(first_line_points, second_line_points)
 }
 
 fn test_lines_touch_collide() {
@@ -39,7 +39,7 @@ fn test_lines_touch_collide() {
 		y: 2
 	}]
 
-	assert check_collision(first_line_points, second_line_points)!
+	assert check_collision(first_line_points, second_line_points)
 }
 
 fn test_negative_coordinates_lines_collide() {
@@ -59,7 +59,7 @@ fn test_negative_coordinates_lines_collide() {
 		y: 0
 	}]
 
-	assert check_collision(first_line_points, second_line_points)!
+	assert check_collision(first_line_points, second_line_points)
 }
 
 fn test_lines_not_collide() {
@@ -79,7 +79,7 @@ fn test_lines_not_collide() {
 		y: 2
 	}]
 
-	assert check_collision(first_line_points, second_line_points)! == false
+	assert check_collision(first_line_points, second_line_points) == false
 }
 
 fn test_parallel_lines_not_collide() {
@@ -99,7 +99,7 @@ fn test_parallel_lines_not_collide() {
 		y: 2
 	}]
 
-	assert check_collision(first_line_points, second_line_points)! == false
+	assert check_collision(first_line_points, second_line_points) == false
 }
 
 fn test_perpendicular_lines_not_collide() {
@@ -119,7 +119,7 @@ fn test_perpendicular_lines_not_collide() {
 		y: 0.5
 	}]
 
-	assert check_collision(first_line_points, second_line_points)! == false
+	assert check_collision(first_line_points, second_line_points) == false
 }
 
 fn test_very_close_lines_not_collide() {
@@ -139,5 +139,5 @@ fn test_very_close_lines_not_collide() {
 		y: 1
 	}]
 
-	assert check_collision(first_line_points, second_line_points)! == false
+	assert check_collision(first_line_points, second_line_points) == false
 }
