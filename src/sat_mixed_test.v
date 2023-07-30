@@ -28,7 +28,7 @@ fn test_triangle_rectangle_collide() {
 		y: 0
 	}]
 
-	assert check_collision(triangle_points, rectangle_points)!
+	assert check_collision(triangle_points, rectangle_points)
 }
 
 fn test_triangle_rectangle_touch_collide() {
@@ -57,7 +57,7 @@ fn test_triangle_rectangle_touch_collide() {
 		y: 0
 	}]
 
-	assert check_collision(triangle_points, rectangle_points)!
+	assert check_collision(triangle_points, rectangle_points)
 }
 
 fn test_triangle_rectangle_not_collide() {
@@ -86,5 +86,5 @@ fn test_triangle_rectangle_not_collide() {
 		y: 2
 	}]
 
-	assert check_collision(triangle_points, rectangle_points)! == false
+	assert check_collision(triangle_points, rectangle_points) == false
 }

@@ -31,7 +31,7 @@ fn test_rectangles_collide() {
 		y: 0
 	}]
 
-	assert check_collision(first_rectangle_points, second_rectangle_points)!
+	assert check_collision(first_rectangle_points, second_rectangle_points)
 }
 
 fn test_rectangles_touch_collide() {
@@ -63,7 +63,7 @@ fn test_rectangles_touch_collide() {
 		y: 1
 	}]
 
-	assert check_collision(first_rectangle_points, second_rectangle_points)!
+	assert check_collision(first_rectangle_points, second_rectangle_points)
 }
 
 fn test_negative_coordinates_rectangles_collide() {
@@ -95,7 +95,7 @@ fn test_negative_coordinates_rectangles_collide() {
 		y: 0
 	}]
 
-	assert check_collision(first_rectangle_points, second_rectangle_points)!
+	assert check_collision(first_rectangle_points, second_rectangle_points)
 }
 
 fn test_rectangles_not_collide() {
@@ -127,5 +127,5 @@ fn test_rectangles_not_collide() {
 		y: 2
 	}]
 
-	assert check_collision(first_rectangle_points, second_rectangle_points)! == false
+	assert check_collision(first_rectangle_points, second_rectangle_points) == false
 }
